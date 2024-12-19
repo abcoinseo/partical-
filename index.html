@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Fluid Particle Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Adjust canvas size to window size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Fluid particle simulation parameters
+        const numParticles = 500;
+        const particles = [];
+        const attractionStrength = 0.1;
+
+        // Particle class to represent each particle in the fluid
+        class Particle {
+            constructor(x, y, radius, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.color = color;
+                this.speedX = Math.random() * 2 - 1;
+                this.speedY = Math.random() * 2 - 1;
+                this.mass = this.radius / 2;
+                this.creationTime = Date.now(); // Store the creation time
+            }
+
+            // Update particle position and behavior
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Simple boundary collision detection
+                if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+                    this.speedX = -this.speedX;
+                }
+                if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+                    this.speedY = -this.speedY;
+                }
+            }
+
+            // Draw particle on the canvas
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.closePath();
+            }
+
+            // Apply attraction force from a specific point (mouse or swipe)
+            applyAttraction(x, y) {
+                let dx = x - this.x;
+                let dy = y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                let force = attractionStrength / (distance + 1); // Prevent division by zero
+
+                this.speedX += force * (dx / distance);
+                this.speedY += force * (dy / distance);
+            }
+
+            // Check if the particle is older than 2 seconds and should be removed
+            isExpired() {
+                return Date.now() - this.creationTime > 2000; // 2000 ms = 2 seconds
+            }
+        }
+
+        // Initialize particles
+        for (let i = 0; i < numParticles; i++) {
+            const radius = Math.random() * 5 + 2;
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const color = `hsl(${Math.random() * 360}, 100%, 50%)`; // Random color
+            particles.push(new Particle(x, y, radius, color));
+        }
+
+        // Animate the simulation
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw each particle
+            for (let i = particles.length - 1; i >= 0; i--) {
+                // Remove expired particles (older than 2 seconds)
+                if (particles[i].isExpired()) {
+                    particles.splice(i, 1);
+                } else {
+                    particles[i].update();
+                    particles[i].draw();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Handle mouse clicks on PC (create particles)
+        window.addEventListener('click', (e) => {
+            createParticles(e.clientX, e.clientY);
+        });
+
+        // Handle touch events on mobile devices (create particles on touch and swipe)
+        window.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            createParticles(touch.clientX, touch.clientY);
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            createParticles(touch.clientX, touch.clientY);
+        });
+
+        // Function to create multiple particles when clicked or swiped
+        function createParticles(x, y) {
+            for (let i = 0; i < 10; i++) {
+                const radius = Math.random() * 5 + 2;
+                const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                particles.push(new Particle(x, y, radius, color));
+            }
+        }
+
+        // Mouse cursor interaction: particles will be attracted to the cursor
+        window.addEventListener('mousemove', (e) => {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            particles.forEach(particle => {
+                particle.applyAttraction(mouseX, mouseY);
+            });
+        });
+
+        // Resize canvas on window resize
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Start the animation loop
+        animate();
+    </script>
+</body>
+</html>
